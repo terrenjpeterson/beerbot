@@ -1,0 +1,49 @@
+{
+  "intents": [
+    {
+      "intent": "ListAvailableCities"
+    },
+    {
+      "intent": "ListBeerCategories"
+    },
+    {
+      "intent": "GetMoreDetail",
+	  "slots": [
+        {
+          "name": "Brewery",
+          "type": "LIST_OF_BREWERIES"
+        }
+      ]
+    },    
+    {
+      "intent": "ListBreweriesForCity",
+      "slots": [
+        {
+          "name": "City",
+          "type": "AMAZON.US_CITY"
+        }
+      ]
+    },
+    {
+      "intent": "GetBeerStyles",
+      "slots": [
+        {
+          "name": "Category",
+          "type": "LIST_OF_CATEGORIES"
+        }
+      ]
+    },
+    {
+      "intent": "AMAZON.StartOverIntent"
+    },
+    {
+      "intent": "AMAZON.HelpIntent"
+    },
+    {
+      "intent": "AMAZON.StopIntent"
+    },
+    {
+      "intent": "AMAZON.CancelIntent"
+    }
+  ]
+}

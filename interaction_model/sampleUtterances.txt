@@ -1,0 +1,39 @@
+AMAZON.StartOverIntent start
+AMAZON.StartOverIntent begin
+AMAZON.StartOverIntent new
+
+AMAZON.StopIntent goodbye
+AMAZON.StopIntent no thank you
+
+ListAvailableCities List cities
+ListAvailableCities List of cities
+ListAvailableCities What cities do you have
+ListAvailableCities Which cities do you have
+ListAvailableCities Give me a list of cities
+
+ListBeerCategories What beer categories are there
+ListBeerCategories Which beer categories are there
+ListBeerCategories What are the beer categories
+ListBeerCategories What are the categories
+ListBeerCategories Which categories exist
+
+ListBreweriesForCity List breweries for {City}
+ListBreweriesForCity List microbreweries for {City}
+ListBreweriesForCity List breweries from {City}
+ListBreweriesForCity List microbreweries from {City}
+ListBreweriesForCity What breweries for {City}
+ListBreweriesForCity What microbreweries for {City}
+ListBreweriesForCity What are located in {City}
+ListBreweriesForCity Which are located in {City}
+ListBreweriesForCity Which are in {City}
+ListBreweriesForCity List what are in {City}
+
+GetBeerStyles List beer styles for {Category}
+GetBeerStyles What beer styles are there for {Category}
+GetBeerStyles Give me the beer styles for {Category}
+GetBeerStyles Give me beer styles for {Category}
+GetBeerStyles Describe beer styles for {Category}
+GetBeerStyles Get beer styles for {Category}
+
+GetMoreDetail More detail on {Brewery}
+GetMoreDetail More information {Brewery}
