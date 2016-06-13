@@ -14,7 +14,52 @@ var breweryDetailAvail = [
             {"cityName":"Charlotte", "stateName":"North Carolina", "breweryData":"locationsCharlotte.json"},            
             {"cityName":"Charlottesville", "stateName":"Virginia", "breweryData":"locationsCharlottesville.json"},
             {"cityName":"McLean", "stateName":"Virginia", "breweryData":"locationsMcLean.json"},
-            {"cityName":"Myrtle Beach", "stateName":"South Carolina", "breweryData":"locationsMyrtleBeach.json"}
+            {"cityName":"Myrtle Beach", "stateName":"South Carolina", "breweryData":"locationsMyrtleBeach.json"},
+            {"cityName":"New York City", "stateName":"New York", "breweryData":"locationsNewYorkCity.json"},
+            {"cityName":"Houston", "stateName":"Texas", "breweryData":"locationsHouston.json"},
+            {"cityName":"Austin", "stateName":"Texas", "breweryData":"locationsAustin.json"},
+            {"cityName":"Dallas", "stateName":"Texas", "breweryData":"locationsDallas.json"},
+            {"cityName":"San Antonio", "stateName":"Texas", "breweryData":"locationsSanAntonio.json"},
+            {"cityName":"Los Angeles", "stateName":"California", "breweryData":"locationsLosAngeles.json"},
+            {"cityName":"San Francisco", "stateName":"California", "breweryData":"locationsSanFrancisco.json"},
+            {"cityName":"San Jose", "stateName":"California", "breweryData":"locationsSanJose.json"},
+            {"cityName":"Fort Worth", "stateName":"Texas", "breweryData":"locationsFortWorth.json"},
+            {"cityName":"Jacksonville", "stateName":"Florida", "breweryData":"locationsJacksonville.json"},
+            {"cityName":"Indianapolis", "stateName":"Indiana", "breweryData":"locationsIndianapolis.json"},
+            {"cityName":"Columbus", "stateName":"Ohio", "breweryData":"locationsColumbus.json"},
+            {"cityName":"El Paso", "stateName":"Texas", "breweryData":"locationsElPaso.json"},
+            {"cityName":"Detroit", "stateName":"Michigan", "breweryData":"locationsDetroit.json"},
+            {"cityName":"Washington", "stateName":"District of Columbia", "breweryData":"locationsWashingtonDC.json"},
+            {"cityName":"Boston", "stateName":"Massachusetts", "breweryData":"locationsBoston.json"},
+            {"cityName":"Memphis", "stateName":"Tennessee", "breweryData":"locationsMemphis.json"},
+            {"cityName":"Nashville", "stateName":"Tennessee", "breweryData":"locaitonsNashville.json"},
+            {"cityName":"Oklahoma City", "stateName":"Oklahoma", "breweryData":"locationsOklahomaCity.json"},
+            {"cityName":"Las Vegas", "stateName":"Nevada", "breweryData":"locationsLasVegas.json"},
+            {"cityName":"Louisville", "stateName":"Kentucky", "breweryData":"locationsLouisville.json"},
+            {"cityName":"Milwaukee", "stateName":"Wisconsin", "breweryData":"locationsMilwaukee.json"},
+            {"cityName":"Albuquerque", "stateName":"New Mexico", "breweryData":"locationsAlbuquerque.json"},
+            {"cityName":"Tuscon", "stateName":"Arizona", "breweryData":"locationsTucson.json"},
+            {"cityName":"Fresno", "stateName":"California", "breweryData":"locationsFresno.json"},
+            {"cityName":"Sacramento", "stateName":"California", "breweryData":"locationsSacramento.json"},
+            {"cityName":"Kansas City", "stateName":"Kansas", "breweryData":"locationsKansasCity.json"},
+            {"cityName":"Long Beach", "stateName":"California", "breweryData":"locationsLongBeach.json"},
+            {"cityName":"Mesa", "stateName":"Arizona", "breweryData":"locationsMesa.json"},
+            {"cityName":"Atlanta", "stateName":"Georgia", "breweryData":"locationsAtlanta.json"},
+            {"cityName":"Colorado Springs", "stateName":"Colorado", "breweryData":"locationsColoradoSprings.json"},
+            {"cityName":"Virginia Beach", "stateName":"Virginia", "breweryData":"locationsVirginiaBeach.json"},
+            {"cityName":"Omaha", "stateName":"Nebraska", "breweryData":"locationsOmaha.json"},
+            {"cityName":"Miami", "stateName":"Florida", "breweryData":"locationsMiami.json"},
+            {"cityName":"Oakland", "stateName":"California", "breweryData":"locationsOakland.json"},
+            {"cityName":"Minneapolis", "stateName":"Minnesota", "breweryData":"locationsMinneapolis.json"},
+            {"cityName":"Tulsa", "stateName":"Oklahoma", "breweryData":"locationsTulsa.json"},
+            {"cityName":"Wichita", "stateName":"Kansas", "breweryData":"locationsWichita.json"},
+            {"cityName":"New Orleans", "stateName":"Louisianna", "breweryData":"locationsNewOrleans.json"},
+            {"cityName":"Arlington", "stateName":"Texas", "breweryData":"locationsArlington.json"},
+            {"cityName":"Chicago", "stateName":"Illinois", "breweryData":"locationsChicago.json"},
+            {"cityName":"Seattle", "stateName":"Washington", "breweryData":"locationsSeattle.json"},
+            {"cityName":"San Diego", "stateName":"California", "breweryData":"locationsSanDiego.json"},
+            {"cityName":"Portland", "stateName":"Oregon", "breweryData":"locationsPortland.json"},
+            {"cityName":"Denver", "stateName":"Colorado", "breweryData":"locationsDenver.json"}
 ];
 
 var beerCategories = [
@@ -208,8 +253,11 @@ function getBeerCategories(intent, session, callback) {
 
     for (i = 0; i < beerCategories.length; i++) {
         speechOutput = speechOutput + beerCategories[i].name + ", ";
-        cardOutput = cardOutput + "\n";
+        cardOutput = cardOutput + beerCategories[i].name + "\n";
     }
+
+    speechOutput = speechOutput + ". Which category would you like the beer styles for? Just say something like " +
+        "List beer styles for North American Origin Ales.";
 
     var repromptText = "If you would like to hear more information about a particular category of beer " +
         "please say something like Describe beer styles for North American Origin Ales";
@@ -217,7 +265,6 @@ function getBeerCategories(intent, session, callback) {
     callback(sessionAttributes,
          buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
         
-//                    { "id":1, "name":"British Origin Ales"},
 }
 
 // This provides styles of beers for a particular category
@@ -233,25 +280,84 @@ function getBeerStyles(intent, session, callback) {
     var speechOutput = "";
     var cardOutput = "";
     var validBeerCategory = false;
+    var lookupBeerCategory = 0;
 
+    // first verify that the category is a valid one
     for (i = 0; i < beerCategories.length; i++) {
-        console.log(beerCategory + " " + beerCategories[i].name);
         if (beerCategory.toLowerCase() == beerCategories[i].name.toLowerCase()) {
-            console.log("found a match with category " + beerCategories[i].id);
+            lookupBeerCategory = beerCategories[i].id;
             validBeerCategory = true;
         }
     }
 
+    // if the category is valid, then pull the index of beers and parse out just those matching the category 
     if (validBeerCategory) {
-        cardOutput = "Styles for Beer Category: " + beerCategory + "\n";
+        var s3 = new aws.S3();
+
+        var getParams = {Bucket : beerDataBucket,
+                         Key : 'beerStyles.json'};
+
+        s3.getObject(getParams, function(err, data) {
+            if(err)
+                console.log('Error getting brewery category data : ' + err);
+            else {
+                var returnData = eval('(' + data.Body + ')');
+                var styleArray = returnData.data;
+                
+                var matchExample = "";
+                var beerStyles = [];
+
+                speechOutput = "Here are the styles of beers under the " + beerCategory + " category. ";
+                cardOutput = "Styles for Beer Category - " + beerCategory + "\n";
+
+                for (i = 0; i < styleArray.length; i++) {
+                    if (styleArray[i].categoryId == lookupBeerCategory) {
+                        
+                        cardOutput = cardOutput + styleArray[i].shortName + "\n";
+                        speechOutput = speechOutput + styleArray[i].shortName + ", ";
+                        matchExample = styleArray[i].shortName;
+
+                        // this will be saved off for the session
+                        var style = {};
+                            style.name = styleArray[i].shortName;
+                            style.id = i;
+                            style.description = styleArray[i].description;
+                            
+                        beerStyles.push(style);
+                    }
+                }
+
+                // saving off the beer styles into session data in case needed in next utterance
+
+                var savedSession = {};
+                    savedSession.categoryId = lookupBeerCategory;
+                    savedSession.detailType = "CategoryData";
+                    savedSession.beerStyles = beerStyles;
+                    
+                var savedData = {};
+                    savedData.data = savedSession;
+                        
+                sessionAttributes = savedData;
+
+                speechOutput = speechOutput + " If you would like specific details about one of these types of beers, " +
+                    "please say something like Tell me more about the beer style " + matchExample + ".";
+
+                var repromptText = "Would you like details about another category?  If so, please ask for it now.";
+
+                callback(sessionAttributes,
+                     buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
+            }
+        });
+        
     } else {
         cardOutput = "Beer Category : " + beerCategory + " not found";
-    }
-    
-    var repromptText = "Please let me know if you would like more information about one of these beers.";
 
-    callback(sessionAttributes,
-         buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
+        var repromptText = "Sorry, " + beerCategory + " was not found. Would you like to try searching for another? " +
+            "If so, say something like List styles for Old English Ales.";
+
+        callback(sessionAttributes,
+             buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
+    }
 }
 
 // This provides the list of city names that currently have breweries listed for
@@ -346,7 +452,7 @@ function getBreweriesByCity(intent, session, callback) {
 
                         var brewery = {};
                             brewery.name = breweryName;
-                            brewery.desc = breweryArray[i].brewery.description;
+                        //    brewery.desc = breweryArray[i].brewery.description;
                             brewery.id   = breweryArray[i].brewery.id;
 
                         localBreweries.push(brewery);
@@ -404,24 +510,51 @@ function getMoreDetail(intent, session, callback) {
     console.log("Get Detailed Information for " + intent.slots.Brewery.value);
 
     if (session.attributes) {
-
-        var breweryDesc = "";
-        var breweryName = "";
-        var detaiBreweryInfoAvail = false;
-        
-        for (i = 0; i < breweryDetailAvail.length; i++) {
-            breweryName = session.attributes.localBreweries[i].name;
-            breweryDesc = session.attributes.localBreweries[i].desc;
-        
-            console.log(breweryName + " match " + intent.slots.Brewery.value);
-        
-            if (breweryName.toLowerCase() == intent.slots.Brewery.value.toLowerCase()) {
-                detailBreweryInfoAvail = true;
-                speechOutput = speechOutput + breweryName + " " + breweryDesc + ", ";
-                cardOutput = cardOutput + "Brewery Name: " + breweryName + "\n" +
-                    "Detail: " + breweryDesc + "\n";
+        sessionAttributes = session.attributes;
+        if (session.attributes.data.detailType = "CategoryData") {
+            // provide detail around a particular category of beer
+            console.log("detail: " + intent.slots.Brewery.value);
+            
+            var beerStyleArray = session.attributes.data.beerStyles;
+            var matchStyle = false;
+            
+            for (i = 0; i < beerStyleArray.length; i++) {
+                if (intent.slots.Brewery.value.toLowerCase() == beerStyleArray[i].name.toLowerCase()) {
+                    speechOutput = beerStyleArray[i].description;
+                    cardOutput = "Beer Style\n" + beerStyleArray[i].description;
+                    matchStyle = true;
+                }
             }
             
+            if (matchStyle === false) {
+                speechOutput = "I'm sorry, I didn't see a beer style matching " + intent.slots.Brewery.value;
+                cardOutput = "Can't match " + intent.slots.Brewery.value;
+            } else {
+                speechOutput = speechOutput + ". If you would like details on another style, please ask now.";
+                repromptText = "For more details on other beer styles, ask now or you can ask about other " +
+                    "beer categories.";
+            }
+            
+        } else {
+            // provide detail around breweries
+            var breweryDesc = "";
+            var breweryName = "";
+            var detailBreweryInfoAvail = false;
+        
+            for (i = 0; i < session.attributes.localBreweries.length; i++) {
+                breweryName = session.attributes.localBreweries[i].name;
+                breweryDesc = session.attributes.localBreweries[i].desc;
+        
+                if (breweryName.toLowerCase() == intent.slots.Brewery.value.toLowerCase()) {
+                    detailBreweryInfoAvail = true;
+                    speechOutput = speechOutput + breweryName + " " + breweryDesc + ", ";
+                    cardOutput = cardOutput + "Brewery Name: " + breweryName + "\n" +
+                        "Detail: " + breweryDesc + "\n";
+                };
+            }
+
+            console.log("build response");
+        
             if (detailBreweryInfoAvail === false) {
                 speechOutput = "Sorry, I don't have information about " + breweryName +
                     ". If you would like information on breweries from another location " +
@@ -432,6 +565,7 @@ function getMoreDetail(intent, session, callback) {
             repromptText = "If you would like information on another location, please " +
                 "say something like List breweries from Charleston, South Carolina.";
         }
+
     } else {
         speechOutput = "Please first ask for details about a particular city.";
         repromptText = "Before getting details, you will need to find information about " +
