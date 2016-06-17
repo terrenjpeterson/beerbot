@@ -1,6 +1,8 @@
 AMAZON.StartOverIntent start
 AMAZON.StartOverIntent begin
 AMAZON.StartOverIntent new
+AMAZON.StartOverIntent main menu
+AMAZON.StartOverIntent menu
 
 AMAZON.StopIntent goodbye
 AMAZON.StopIntent no thank you
@@ -11,6 +13,9 @@ ListAvailableCities What cities do you have
 ListAvailableCities Which cities do you have
 ListAvailableCities Give me a list of cities
 
+ListBeerCategories Find me a beer
+ListBeerCategories Find me a beery type
+ListBeerCategories What beer types are there
 ListBeerCategories What beer categories are there
 ListBeerCategories Which beer categories are there
 ListBeerCategories What are the beer categories
@@ -37,3 +42,6 @@ GetBeerStyles Get beer styles for {Category}
 
 GetMoreDetail More detail on {Brewery}
 GetMoreDetail More information {Brewery}
+GetMoreDetail Tell me more about {Brewery}
+GetMoreDetail Tell me more on {Brewery}
+GetMoreDetail Tell me more information on {Brewery}
