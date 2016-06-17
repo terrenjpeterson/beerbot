@@ -63,18 +63,18 @@ var breweryDetailAvail = [
 ];
 
 var beerCategories = [
-            { "id":1, "name":"British Origin Ales"},
-            { "id":2, "name":"Irish Origin Ales"},
-            { "id":3, "name":"North American Origin Ales"},
-            { "id":4, "name":"German Origin Ales"},
-            { "id":5, "name":"Belgian And French Origin Ales"},
+            { "id":1, "name":"British Ales"},
+            { "id":2, "name":"Irish Ales"},
+            { "id":3, "name":"North American Ales"},
+            { "id":4, "name":"German Ales"},
+            { "id":5, "name":"Belgian and French Ales"},
             { "id":6, "name":"International Ale Styles"},
-            { "id":7, "name":"European-germanic Lager"},
+            { "id":7, "name":"European-Germanic Lager"},
             { "id":8, "name":"North American Lager"},
             { "id":9, "name":"Other Lager"},
             { "id":10, "name":"International Styles"},
             { "id":11, "name":"Hybrid Beer"},
-            { "id":12, "name":"Mead, Cider, & Perry"},
+            { "id":12, "name":"Mead, Cider, and Perry"},
             { "id":13, "name":"Other Origin"},
             { "id":14, "name":"Malternative Beverages"},
             { "id":15, "name":"All Others"}
@@ -196,7 +196,8 @@ function getWelcomeResponse(callback) {
 
     var speechOutput = "Welcome to the Beer Bot, the best source for information " +
         "related to microbreweries and craft beers.  Please begin by saying something like " +
-        "List Beer Categories, or List for me the microbreweries in Richmond, Virginia.";
+        "Find me a beer!  This will walk you through available types that I have information on. " +
+        "You can also say, List for me the microbreweries in Richmond, Virginia.";
     var repromptText = "Please tell me how I can help you by saying phrases like, " +
         "list breweries in Richmond, Virginia.";
 
@@ -214,8 +215,8 @@ function getHelpResponse(callback) {
     // this will be what the user hears after asking for help
 
     var speechOutput = "The Beer bot provides information about different craft beers and who makes them. " +
-        "If you are tryingn to figure out a type of beer to try out, start by saying " +
-        "Which beer categories are there? " +
+        "If you are trying to figure out a type of beer to try out, start by saying " +
+        "Find me a beer! " +
         "If you are trying to find a microbrewery in a particular location, say " +
         "List breweries for Richmond, Virginia.";
 
@@ -248,7 +249,8 @@ function getBeerCategories(intent, session, callback) {
 
     console.log("Get Beer Categories Invoked");
 
-    var speechOutput = "Here are the following categories of beer that we track styles for. ";
+    var speechOutput = "Here are the following categories of beer that we track styles for. Let's " +
+        "start by going through them to see if you hear one that you like. ";
     var cardOutput = "Beer Styles:\n";
 
     for (i = 0; i < beerCategories.length; i++) {
@@ -256,11 +258,11 @@ function getBeerCategories(intent, session, callback) {
         cardOutput = cardOutput + beerCategories[i].name + "\n";
     }
 
-    speechOutput = speechOutput + ". Which category would you like the beer styles for? Just say something like " +
-        "List beer styles for North American Origin Ales.";
+    speechOutput = speechOutput + ". Which category sounded interesting as I have more details? Just say something like " +
+        "List beer styles for North American Ales.";
 
     var repromptText = "If you would like to hear more information about a particular category of beer " +
-        "please say something like Describe beer styles for North American Origin Ales";
+        "please say something like Describe beer styles for North American Ales";
 
     callback(sessionAttributes,
          buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
@@ -274,7 +276,7 @@ function getBeerStyles(intent, session, callback) {
     var sessionAttributes = {};
     var shouldEndSession = false;
 
-    console.log("Get Beer Categories Invoked" + intent.slots.Category.value);
+    console.log("Get Beer Categories Invoked for :" + intent.slots.Category.value);
 
     var beerCategory = intent.slots.Category.value;
     var speechOutput = "";
@@ -284,6 +286,7 @@ function getBeerStyles(intent, session, callback) {
 
     // first verify that the category is a valid one
     for (i = 0; i < beerCategories.length; i++) {
+        console.log("category : " + i + " " + beerCategories[i].name);
         if (beerCategory.toLowerCase() == beerCategories[i].name.toLowerCase()) {
             lookupBeerCategory = beerCategories[i].id;
             validBeerCategory = true;
@@ -340,7 +343,7 @@ function getBeerStyles(intent, session, callback) {
                 sessionAttributes = savedData;
 
                 speechOutput = speechOutput + " If you would like specific details about one of these types of beers, " +
-                    "please say something like Tell me more about the beer style " + matchExample + ".";
+                    "please say something like Tell me more about " + matchExample + ".";
 
                 var repromptText = "Would you like details about another category?  If so, please ask for it now.";
 
@@ -530,7 +533,7 @@ function getMoreDetail(intent, session, callback) {
                 speechOutput = "I'm sorry, I didn't see a beer style matching " + intent.slots.Brewery.value;
                 cardOutput = "Can't match " + intent.slots.Brewery.value;
             } else {
-                speechOutput = speechOutput + ". If you would like details on another style, please ask now.";
+                speechOutput = speechOutput + " If you would like details on another style, please ask now.";
                 repromptText = "For more details on other beer styles, ask now or you can ask about other " +
                     "beer categories.";
             }
