@@ -4,6 +4,8 @@
 
 var aws = require('aws-sdk');
 
+const https = require('https');
+
 var breweryDetailAvail = [
             {"cityName":"Richmond", "stateName":"Virginia", "breweryData":"locationsRichmond.json"},
             {"cityName":"Alexandria", "stateName":"Virginia", "breweryData":"locationsAlexandria.json"},
@@ -194,17 +196,26 @@ function getWelcomeResponse(callback) {
     var shouldEndSession = false;
     var cardTitle = "Welcome to Beer Bot";
 
-    var speechOutput = "Welcome to the Beer Bot, the best source for information " +
+    var speechOutput = "Welcome to the bEr Boht, the best source for information " +
         "related to microbreweries and craft beers.  Please begin by saying something like " +
-        "Find me a beer!  This will walk you through available types that I have information on. " +
-        "You can also say, List for me the microbreweries in Richmond, Virginia.";
+        "Find me a bEr. This will walk you through available types that I have information on. " +
+        "You can also say, List for me the microbreweries in Richmond, Virginia and I will " +
+        "return all of the places I have on that particular location.";
+
+    var cardOutput = "Welcome to Beer Bot, the best source for information related to microbreweries " +
+        "and craft beers. Begin by selecting the following options:\n" +
+        "Find me a beer - this provides a selector guide of more than 100 beers.\n" +
+        "List for me the microbreweries in (location). There are more than 50 to choose from.\n" +
+        "List for me locations.";
+
     var repromptText = "Please tell me how I can help you by saying phrases like, " +
-        "list breweries in Richmond, Virginia.";
+        "list breweries in Richmond, Virginia and it will return all of the places " +
+        "I have information on for that location.";
 
     console.log('speech output : ' + speechOutput);
 
     callback(sessionAttributes,
-        buildSpeechletResponse(cardTitle, speechOutput, speechOutput, repromptText, shouldEndSession));
+        buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
 
 }
 
@@ -254,7 +265,7 @@ function getBeerCategories(intent, session, callback) {
     var cardOutput = "Beer Styles:\n";
 
     for (i = 0; i < beerCategories.length; i++) {
-        speechOutput = speechOutput + beerCategories[i].name + ", ";
+        speechOutput = speechOutput + beerCategories[i].name  + ", ";
         cardOutput = cardOutput + beerCategories[i].name + "\n";
     }
 
@@ -317,7 +328,7 @@ function getBeerStyles(intent, session, callback) {
                     if (styleArray[i].categoryId == lookupBeerCategory) {
                         
                         cardOutput = cardOutput + styleArray[i].shortName + "\n";
-                        speechOutput = speechOutput + styleArray[i].shortName + ", ";
+                        speechOutput = speechOutput + styleArray[i].shortName.replace(/\//g, " ") + ", ";
                         matchExample = styleArray[i].shortName;
 
                         // this will be saved off for the session
@@ -469,8 +480,12 @@ function getBreweriesByCity(intent, session, callback) {
                     
                     // saving off the local breweries into session data in case needed in next utterance
                     
+                    var savedSession = {};
+                        savedSession.localBreweries = localBreweries;
+                        savedSession.detailType = "BreweryData"
+
                     var savedData = {};
-                        savedData.localBreweries = localBreweries;
+                        savedData.data = savedSession;
                         
                     sessionAttributes = savedData;
                     
@@ -514,7 +529,8 @@ function getMoreDetail(intent, session, callback) {
 
     if (session.attributes) {
         sessionAttributes = session.attributes;
-        if (session.attributes.data.detailType = "CategoryData") {
+        console.log("Detail Type: " + session.attributes.data.detailType);
+        if (session.attributes.data.detailType == "CategoryData") {
             // provide detail around a particular category of beer
             console.log("detail: " + intent.slots.Brewery.value);
             
@@ -537,36 +553,89 @@ function getMoreDetail(intent, session, callback) {
                 repromptText = "For more details on other beer styles, ask now or you can ask about other " +
                     "beer categories.";
             }
+
+            callback(sessionAttributes,
+                buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));            
             
         } else {
             // provide detail around breweries
             var breweryDesc = "";
             var breweryName = "";
             var detailBreweryInfoAvail = false;
-        
-            for (i = 0; i < session.attributes.localBreweries.length; i++) {
-                breweryName = session.attributes.localBreweries[i].name;
-                breweryDesc = session.attributes.localBreweries[i].desc;
-        
-                if (breweryName.toLowerCase() == intent.slots.Brewery.value.toLowerCase()) {
-                    detailBreweryInfoAvail = true;
-                    speechOutput = speechOutput + breweryName + " " + breweryDesc + ", ";
-                    cardOutput = cardOutput + "Brewery Name: " + breweryName + "\n" +
-                        "Detail: " + breweryDesc + "\n";
-                };
-            }
 
-            console.log("build response");
+            console.log('attempt to get brewery detail');
+
+            var APIurl = 'https://api.brewerydb.com/v2/brewery/';
+            //var breweryId = 'mftbkH';
+            var breweryId = 'HZS3wv';
+            var APIkey =
+
+            https.get(APIurl + breweryId + '/beers?key=' + APIkey + '&format=json', (res) => {
+                //console.log('statusCode: ', res.statusCode);
+                //console.log('headers: ', res.headers);
+
+                var beerData = "";
+
+                res.on('data', (d) => {
+                //    console.log('data received', d.toString('utf8'));
+                    console.log('data received');
+                    beerData += d;
+                //    process.stdout.write(d);
+                });
+
+                res.on('end', (d) => {
+                    console.log('wrap-up');
+                    //console.log(beerData.toString('utf8'));
+                    
+                    returnData = eval('(' + beerData.toString('utf8') + ')');
+                    
+                    if(returnData.message == "Request Successful") {
+                        beerArray = returnData.data;
+                        console.log('Beers Available: ' + beerArray.length);
+                        console.log('First Entry: ' + JSON.stringify(beerArray[0]));
+                        for (i = 0; i < beerArray.length; i++) {
+                            speechOutput = speechOutput + beerArray[i].name.replace(/[&#]/g, " ") + 
+                                " is a " + beerArray[i].style.name + ". ";
+                            cardOutput = cardOutput + beerArray[i].name + 
+                                " : " + beerArray[i].style.name;
+                        };
+                    }
+                    
+                    console.log('message status:', returnData.message);
+                    
+                    callback(sessionAttributes,
+                        buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
+                });
+
+            }).on('error', (e) => {
+                console.error(e);
+            });
+
+            console.log("Beyond API call");
+
+        //    for (i = 0; i < session.attributes.localBreweries.length; i++) {
+        //        breweryName = session.attributes.localBreweries[i].name;
+        //        breweryDesc = session.attributes.localBreweries[i].desc;
+        //
+        //        if (breweryName.toLowerCase() == intent.slots.Brewery.value.toLowerCase()) {
+        //            detailBreweryInfoAvail = true;
+        //            speechOutput = speechOutput + breweryName + " " + breweryDesc + ", ";
+        //            cardOutput = cardOutput + "Brewery Name: " + breweryName + "\n" +
+        //                "Detail: " + breweryDesc + "\n";
+        //        };
+        //    }
+
+        //    console.log("build response");
         
-            if (detailBreweryInfoAvail === false) {
-                speechOutput = "Sorry, I don't have information about " + breweryName +
-                    ". If you would like information on breweries from another location " +
-                    " please ask that now.";
-                cardOutput = "No information available on : " + breweryName;
-            }
+        //    if (detailBreweryInfoAvail === false) {
+        //        speechOutput = "Sorry, I don't have information about " + breweryName +
+        //           ". If you would like information on breweries from another location " +
+        //            " please ask that now.";
+        //       cardOutput = "No information available on : " + breweryName;
+        //    }
             
-            repromptText = "If you would like information on another location, please " +
-                "say something like List breweries from Charleston, South Carolina.";
+        //    repromptText = "If you would like information on another location, please " +
+        //        "say something like List breweries from Charleston, South Carolina.";
         }
 
     } else {
@@ -574,10 +643,15 @@ function getMoreDetail(intent, session, callback) {
         repromptText = "Before getting details, you will need to find information about " +
             "a particular location. Please say something like " +
             "List microbreweries for Richmond, Virginia.";
+            
+        callback(sessionAttributes,
+            buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));            
     }
 
-    callback(sessionAttributes,
-        buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
+    console.log('reached callback');
+
+    //callback(sessionAttributes,
+    //    buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
 }
 
 // --------------- Helpers that build all of the responses -----------------------
