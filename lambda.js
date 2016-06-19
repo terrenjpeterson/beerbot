@@ -297,7 +297,6 @@ function getBeerStyles(intent, session, callback) {
 
     // first verify that the category is a valid one
     for (i = 0; i < beerCategories.length; i++) {
-        console.log("category : " + i + " " + beerCategories[i].name);
         if (beerCategory.toLowerCase() == beerCategories[i].name.toLowerCase()) {
             lookupBeerCategory = beerCategories[i].id;
             validBeerCategory = true;
@@ -324,9 +323,13 @@ function getBeerStyles(intent, session, callback) {
                 speechOutput = "Here are the styles of beers under the " + beerCategory + " category. ";
                 cardOutput = "Styles for Beer Category - " + beerCategory + "\n";
 
+                // there is a limit to how much can be returned in the session, so need to not exceed 20
+                var categoryStyle = 0;
+
                 for (i = 0; i < styleArray.length; i++) {
-                    if (styleArray[i].categoryId == lookupBeerCategory) {
-                        
+                    if (styleArray[i].categoryId == lookupBeerCategory && categoryStyle < 20) {
+
+                        categoryStyle += 1;                        
                         cardOutput = cardOutput + styleArray[i].shortName + "\n";
                         speechOutput = speechOutput + styleArray[i].shortName.replace(/\//g, " ") + ", ";
                         matchExample = styleArray[i].shortName;
@@ -354,7 +357,7 @@ function getBeerStyles(intent, session, callback) {
                 sessionAttributes = savedData;
 
                 speechOutput = speechOutput + " If you would like specific details about one of these types of beers, " +
-                    "please say something like Tell me more about " + matchExample + ".";
+                    "please say something like More details about " + matchExample + ".";
 
                 var repromptText = "Would you like details about another category?  If so, please ask for it now.";
 
@@ -523,14 +526,12 @@ function getMoreDetail(intent, session, callback) {
     var cardOutput = "";
     var cardTitle = "Detailed Information";
 
-    console.log('Processing more detail');
-
     // first check if a session exists, if so process based on type.  if not then exit
     if (session.attributes) {
         sessionAttributes = session.attributes;
         if (session.attributes.data.detailType == "CategoryData") {
             // this will provide detail around a particular category of beer
-            console.log("Get brewery detail for: " + intent.slots.Brewery.value);
+            console.log("Get category detail for: " + intent.slots.Brewery.value);
             
             var beerStyleArray = session.attributes.data.beerStyles;
             var matchStyle = false;
@@ -538,6 +539,8 @@ function getMoreDetail(intent, session, callback) {
             // try and find a match based on the different styles available            
             for (i = 0; i < beerStyleArray.length; i++) {
                 if (intent.slots.Brewery.value.toLowerCase() == beerStyleArray[i].name.toLowerCase()) {
+                    console.log("found a match in style for " + JSON.stringify(beerStyleArray[i]));
+                    cardTitle = cardTitle + " " + intent.slots.Brewery.value;
                     speechOutput = beerStyleArray[i].description;
                     cardOutput = "Beer Style\n" + beerStyleArray[i].description;
                     matchStyle = true;
@@ -573,6 +576,7 @@ function getMoreDetail(intent, session, callback) {
 
             console.log('attempt to get brewery detail' + intent.slots.Brewery.value);
 
+            // search through the breweries in the session data for one that matches
             for (i = 0; i < session.attributes.data.localBreweries.length; i++) {
                 // scrub the data to make it easier to match taking out common words
                 breweryName = session.attributes.data.localBreweries[i].name;
@@ -589,14 +593,17 @@ function getMoreDetail(intent, session, callback) {
                 };
             }
 
+            // step #2 in the process if a brewery is found is to get the beers for the particular brewery
             if (detailBreweryInfoAvail) {
+                cardTitle = "Beer Information for " + intent.slots.Brewery.value;
                 // call BreweryDB API and get what beers are available for particular brewery
                 var APIurl = 'https://api.brewerydb.com/v2/brewery/';
                 //var breweryId = 'mftbkH';
                 //var breweryId = 'HZS3wv';
+                var APIkey = '14d7b7c5858092c173d96393211dd0f3';
 
                 https.get(APIurl + breweryId + '/beers?key=' + APIkey + '&format=json', (res) => {
-                    console.log('statusCode: ', res.statusCode);
+                    console.log('API Call to Brewery DB HTTP Code: ', res.statusCode);
                     //console.log('headers: ', res.headers);
 
                     var beerData = "";
@@ -605,6 +612,7 @@ function getMoreDetail(intent, session, callback) {
                         beerData += d;
                     });
 
+                    // this is the logic that gets executed once a successful API call is completed
                     res.on('end', (d) => {
                         // now process data returned from the API call
                         returnData = eval('(' + beerData.toString('utf8') + ')');
@@ -616,14 +624,19 @@ function getMoreDetail(intent, session, callback) {
                             if (beerArray != null) {
                                 speechOutput = "Here are the beers for " + requestName + ". ";
                                 console.log("length: " + beerArray.length);
-                                console.log(beerArray[45]);
-                                for (i = 0; i < beerArray.length; i++) {
+                                var beerRange = 0;
+                                // note - Alexa has a maximum of 8000 characters it can repeat at once, so might exceed
+                                if (beerArray.length > 100)
+                                    beerRange = 100;
+                                else
+                                    beerRange = beerArray.length;
+                                for (i = 0; i < beerRange; i++) {
                                     //console.log('which one ' + i);
                                     if (beerArray[i].style != null && beerArray[i].name != null) {
                                         speechOutput = speechOutput + beerArray[i].name.replace(/[&#]/g, " ") + 
                                             " is a " + beerArray[i].style.name.replace(/[&]/g, "and")  + ". ";
                                         cardOutput = cardOutput + beerArray[i].name + 
-                                            " : " + beerArray[i].style.name;
+                                            " : " + beerArray[i].style.name + "\n";
                                     }
                                 };
                                 speechOutput = speechOutput + " If you would like more details on another brewery in " +
@@ -669,11 +682,6 @@ function getMoreDetail(intent, session, callback) {
         callback(sessionAttributes,
             buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));            
     }
-
-    console.log('reached callback');
-
-    //callback(sessionAttributes,
-    //    buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
 }
 
 // --------------- Helpers that build all of the responses -----------------------
