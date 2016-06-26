@@ -556,15 +556,19 @@ function getMoreDetail(intent, session, callback) {
             var beerStyleArray = session.attributes.data.beerStyles;
             var matchStyle = false;
 
-            // try and find a match based on the different styles available            
-            for (i = 0; i < beerStyleArray.length; i++) {
-                if (intent.slots.Brewery.value.toLowerCase() == beerStyleArray[i].name.toLowerCase()) {
-                    console.log("found a match in style for " + JSON.stringify(beerStyleArray[i]));
-                    cardTitle = cardTitle + " " + intent.slots.Brewery.value;
-                    speechOutput = beerStyleArray[i].description;
-                    cardOutput = "Beer Style\n" + beerStyleArray[i].description;
-                    matchStyle = true;
+            if (intent.slots.Brewery.value != undefined) {
+                // try and find a match based on the different styles available            
+                for (i = 0; i < beerStyleArray.length; i++) {
+                    if (intent.slots.Brewery.value.toLowerCase() == beerStyleArray[i].name.toLowerCase()) {
+                        console.log("found a match in style for " + JSON.stringify(beerStyleArray[i]));
+                        cardTitle = cardTitle + " " + intent.slots.Brewery.value;
+                        speechOutput = beerStyleArray[i].description;
+                        cardOutput = "Beer Style\n" + beerStyleArray[i].description;
+                        matchStyle = true;
+                    }
                 }
+            } else {
+                console.log('error beer style being dropped from response');
             }
             
             if (matchStyle === false) {
