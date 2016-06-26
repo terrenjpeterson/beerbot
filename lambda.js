@@ -8,6 +8,10 @@ const https = require('https');
 
 var breweryDetailAvail = [
             {"cityName":"Richmond", "stateName":"Virginia", "breweryData":"locationsRichmond.json"},
+            {"cityName":"Seattle", "stateName":"Washington", "breweryData":"locationsSeattle.json"},
+            {"cityName":"San Diego", "stateName":"California", "breweryData":"locationsSanDiego.json"},
+            {"cityName":"Portland", "stateName":"Oregon", "breweryData":"locationsPortland.json"},
+            {"cityName":"Denver", "stateName":"Colorado", "breweryData":"locationsDenver.json"},
             {"cityName":"Alexandria", "stateName":"Virginia", "breweryData":"locationsAlexandria.json"},
             {"cityName":"Charleston", "stateName":"South Carolina", "breweryData":"locationsCharleston.json"},
             {"cityName":"Philadelphia", "stateName":"Pennsylvania", "breweryData":"locationsPhiladelphia.json"},
@@ -43,7 +47,7 @@ var breweryDetailAvail = [
             {"cityName":"Tuscon", "stateName":"Arizona", "breweryData":"locationsTucson.json"},
             {"cityName":"Fresno", "stateName":"California", "breweryData":"locationsFresno.json"},
             {"cityName":"Sacramento", "stateName":"California", "breweryData":"locationsSacramento.json"},
-            {"cityName":"Kansas City", "stateName":"Kansas", "breweryData":"locationsKansasCity.json"},
+            {"cityName":"Kansas City", "stateName":"Missouri", "breweryData":"locationsKansasCity.json"},
             {"cityName":"Long Beach", "stateName":"California", "breweryData":"locationsLongBeach.json"},
             {"cityName":"Mesa", "stateName":"Arizona", "breweryData":"locationsMesa.json"},
             {"cityName":"Atlanta", "stateName":"Georgia", "breweryData":"locationsAtlanta.json"},
@@ -58,10 +62,7 @@ var breweryDetailAvail = [
             {"cityName":"New Orleans", "stateName":"Louisianna", "breweryData":"locationsNewOrleans.json"},
             {"cityName":"Arlington", "stateName":"Texas", "breweryData":"locationsArlington.json"},
             {"cityName":"Chicago", "stateName":"Illinois", "breweryData":"locationsChicago.json"},
-            {"cityName":"Seattle", "stateName":"Washington", "breweryData":"locationsSeattle.json"},
-            {"cityName":"San Diego", "stateName":"California", "breweryData":"locationsSanDiego.json"},
-            {"cityName":"Portland", "stateName":"Oregon", "breweryData":"locationsPortland.json"},
-            {"cityName":"Denver", "stateName":"Colorado", "breweryData":"locationsDenver.json"}
+            {"cityName":"St. Louis", "stateName":"Missouri", "breweryData":"locationsStLouis.json"}
 ];
 
 var beerCategories = [
@@ -419,28 +420,27 @@ function getBreweriesByCity(intent, session, callback) {
     if (intent.slots.City.value) {
 
         requestCity = intent.slots.City.value;
+        requestCity = requestCity.substr(0,1).toUpperCase() + requestCity.substr(1);
+        console.log("find data for " + requestCity);
         cardTitle = "Brewery information for " + requestCity;
         haveBreweryDetail = false;
         cityBreweryObject = "";
 
-        // first check the array of cities that have brewery information for
-        
+        // step 1. first check the array of cities that have brewery information for
         for (i = 0; i < breweryDetailAvail.length; i++) {
-            
             console.log("checking : " + breweryDetailAvail[i].cityName);
             
             if (requestCity == breweryDetailAvail[i].cityName) {
                 haveBreweryDetail = true;
                 cityBreweryObject = breweryDetailAvail[i].breweryData;
             }
-                
             if (requestCity == breweryDetailAvail[i].cityName + " " + breweryDetailAvail[i].stateName) {
                 haveBreweryDetail = true;
                 cityBreweryObject = breweryDetailAvail[i].breweryData;
             }
         }
 
-        // process response depending on if detail is available
+        // step 2. process response depending on if detail is available
         if (haveBreweryDetail) {
         
             var s3 = new aws.S3();
@@ -473,8 +473,16 @@ function getBreweriesByCity(intent, session, callback) {
 
                         localBreweries.push(brewery);
 
+                        // save off last brewery to use in encouraging user to ask for brewery detail.
                         localDetailBrewery = breweryName;
+                        // shorten the name to encourage not spelling out common words like brewery that are hard to pronounce
+                        localDetailBrewery = localDetailBrewery.replace(" Company","");
+                        localDetailBrewery = localDetailBrewery.replace(" Brewing","");
+                        localDetailBrewery = localDetailBrewery.replace(" Brewery","");
+                        localDetailBrewery = localDetailBrewery.replace("The ","");
+                        localDetailBrewery = localDetailBrewery.replace(" Co.","");
                             
+                        // list out brewery onto card and verbalize back in the response
                         speechOutput = speechOutput + breweryName + ", ";
                         cardOutput = cardOutput + breweryName + "\n";
                     }
@@ -503,9 +511,11 @@ function getBreweriesByCity(intent, session, callback) {
             });
             
         } else {
+            // this gets invoked when what the utterance was doesn't match anything in the array
             speechOutput = "I'm sorry I couldn't locate information for " + requestCity + ". " +
                 "If you would like a complete list of cities that I do have, please say " +
                 "List Cities.";
+            cardOutput = "No information was available for " + requestCity;
             repromptOutput = "No information was available for " + requestCity + ". " +
                 "If you would like a complete list of cities that I do have, please say " +
                 "List Cities.";
@@ -513,6 +523,15 @@ function getBreweriesByCity(intent, session, callback) {
             callback(sessionAttributes,
                 buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
             }
+    } else {
+        speechOutput = "Please provide a city name. If you would like a complete list of cities " +
+            "that I do have, please say List Cities.";
+        cardOutput = "No city name provided.";
+        repromptOutput = "To use this feature, you need to provide a city name. If you would like " +
+            "a complete list of cities, please say List Cities.";
+
+        callback(sessionAttributes,
+            buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));            
     }
 }
 
@@ -571,19 +590,22 @@ function getMoreDetail(intent, session, callback) {
             requestName = intent.slots.Brewery.value;
             requestName = requestName.toLowerCase();
             requestName = requestName.replace(" company","");
+            requestName = requestName.replace(" brewing","");
+            requestName = requestName.replace(" brewery","");
             requestName = requestName.replace("the ","");
-            //console.log("X" + requestName + "X");
 
-            console.log('attempt to get brewery detail' + intent.slots.Brewery.value);
+            console.log('attempt to get brewery detail: ' + requestName);
 
             // search through the breweries in the session data for one that matches
             for (i = 0; i < session.attributes.data.localBreweries.length; i++) {
                 // scrub the data to make it easier to match taking out common words
                 breweryName = session.attributes.data.localBreweries[i].name;
-                breweryName = breweryName.replace(" Company","");
-                breweryName = breweryName.replace("The ","");
-                breweryName = breweryName.replace("Co.","");
                 breweryName = breweryName.toLowerCase();
+                breweryName = breweryName.replace(" company","");
+                breweryName = breweryName.replace(" brewing","");
+                breweryName = breweryName.replace(" brewery","");
+                breweryName = breweryName.replace("the ","");
+                breweryName = breweryName.replace(" co.","");
                 //console.log('Brewery Name : ' + breweryName);
 
                 if (breweryName == requestName) {
@@ -643,9 +665,10 @@ function getMoreDetail(intent, session, callback) {
                                 "the area, please say so now.";
                                 repromptText = "For more details about another brewery, please ask for it now.";
                             } else {
-                                speechOutput = "Sorry, no beer data available for " + requestName + ". Would you like " +
+                                speechOutput = "Sorry, no beer data available for " + intent.slots.Brewery.value + " found in the " +
+                                    "crowdsourced brewery database at brewery.com.  Would you like " +
                                     "to try for data about another brewery? If so, state that name now.";
-                                cardOutput = "No Beer data availble for " + requestName;
+                                cardOutput = "No Beer data availble for " + requestName + " at BreweryDB.com.";
                                 repromptText = "If you would like microbrewery information about a different location " +
                                     "please ask for it now.";
                             }
