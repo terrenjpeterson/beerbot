@@ -479,6 +479,7 @@ function getBreweriesByCity(intent, session, callback) {
                         localDetailBrewery = localDetailBrewery.replace(" Company","");
                         localDetailBrewery = localDetailBrewery.replace(" Brewing","");
                         localDetailBrewery = localDetailBrewery.replace(" Brewery","");
+                        localDetailBrewery = localDetailBrewery.replace(" Beer","");
                         localDetailBrewery = localDetailBrewery.replace("The ","");
                         localDetailBrewery = localDetailBrewery.replace(" Co.","");
                             
@@ -500,7 +501,7 @@ function getBreweriesByCity(intent, session, callback) {
                     sessionAttributes = savedData;
                     
                     speechOutput = speechOutput + "If you would like to know about the beers available at one " +
-                        "of these breweries, please say something like, More details on " + localDetailBrewery;
+                        "of these breweries, please say something like, More detail on " + localDetailBrewery;
                     
                     repromptText = "If you would like brewery information for another city, please ask for it. " +
                         "For a complete list of cities available, say List Cities.";
@@ -592,6 +593,7 @@ function getMoreDetail(intent, session, callback) {
             requestName = requestName.replace(" company","");
             requestName = requestName.replace(" brewing","");
             requestName = requestName.replace(" brewery","");
+            requestName = requestName.replace(" beer","");
             requestName = requestName.replace("the ","");
 
             console.log('attempt to get brewery detail: ' + requestName);
@@ -604,6 +606,7 @@ function getMoreDetail(intent, session, callback) {
                 breweryName = breweryName.replace(" company","");
                 breweryName = breweryName.replace(" brewing","");
                 breweryName = breweryName.replace(" brewery","");
+                breweryName = breweryName.replace(" beer","");
                 breweryName = breweryName.replace("the ","");
                 breweryName = breweryName.replace(" co.","");
                 //console.log('Brewery Name : ' + breweryName);
@@ -644,7 +647,7 @@ function getMoreDetail(intent, session, callback) {
                             beerArray = returnData.data;
                             // first make sure that beer data returned in the array
                             if (beerArray != null) {
-                                speechOutput = "Here are the beers for " + requestName + ". ";
+                                speechOutput = "Here are the beers for " + intent.slots.Brewery.value + ". ";
                                 console.log("length: " + beerArray.length);
                                 var beerRange = 0;
                                 // note - Alexa has a maximum of 8000 characters it can repeat at once, so might exceed
@@ -662,11 +665,11 @@ function getMoreDetail(intent, session, callback) {
                                     }
                                 };
                                 speechOutput = speechOutput + " If you would like more details on another brewery in " +
-                                "the area, please say so now.";
+                                    session.attributes.data.city + ", please say so now.";
                                 repromptText = "For more details about another brewery, please ask for it now.";
                             } else {
                                 speechOutput = "Sorry, no beer data available for " + intent.slots.Brewery.value + " found in the " +
-                                    "crowdsourced brewery database at brewery.com.  Would you like " +
+                                    "crowdsourced brewery database at brewerydb.com.  Would you like " +
                                     "to try for data about another brewery? If so, state that name now.";
                                 cardOutput = "No Beer data availble for " + requestName + " at BreweryDB.com.";
                                 repromptText = "If you would like microbrewery information about a different location " +
