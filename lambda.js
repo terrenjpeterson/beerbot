@@ -605,7 +605,7 @@ function getMoreBreweryDetail(intent, session, callback) {
         var APIurl = 'https://api.brewerydb.com/v2/brewery/';
         //var breweryId = 'mftbkH';
         //var breweryId = 'HZS3wv';
-        var APIkey = '14d7b7c5858092c173d96393211dd0f3';
+        var APIkey = 'xxx';
 
         https.get(APIurl + breweryId + '/beers?key=' + APIkey + '&format=json', (res) => {
             console.log('API Call to Brewery DB HTTP Code: ', res.statusCode);
