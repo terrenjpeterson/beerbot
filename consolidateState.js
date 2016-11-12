@@ -25,9 +25,14 @@ exports.handler = (event, context, callback) => {
             var uniqueBrewery = true;
 
             for (i = 0; i < stateBreweryArray.length; i++) {
+                stateBreweryArray[i].name = stateBreweryArray[i].name.replace(" Co.","");
+                stateBreweryArray[i].name = stateBreweryArray[i].name.replace(" Company","");
+                var nameLength = stateBreweryArray[i].name.length;
+                if (stateBreweryArray[i].name[nameLength-2] == 'C' && stateBreweryArray[i].name[nameLength-1] == 'o') {
+                    stateBreweryArray[i].name = stateBreweryArray[i].name.replace(" Co","");
+                }
                 // check to make sure that the name is unique before inserting
                 for (j = 0; j < slotArray.length; j++ ) {
-                    //console.log('does' + stateBreweryArray[i].name + 'match' + slotArray[j]);
                     if (stateBreweryArray[i].name == slotArray[j]) {
                         uniqueBrewery = false;
                     }
