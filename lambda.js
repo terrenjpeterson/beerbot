@@ -164,8 +164,14 @@ function onIntent(intentRequest, session, callback) {
         getBreweriesByCity(intent, session, callback);
     } else if ("GetBeerStyles" === intentName) {
         getBeerStyles(intent, session, callback);
+//    } else if ("WhatsOnTap" === intentName) {
+//        getBeersAtBrewery(intent, session, callback);        
     } else if ("GetMoreDetail" === intentName) {
-        getMoreDetail(intent, session, callback);
+        if (session.attributes.data.detailType == "CategoryData") {
+            getMoreCategoryDetail(intent, session, callback);
+        } else {
+            getMoreBreweryDetail(intent, session, callback);
+        }
     } else if ("AMAZON.StartOverIntent" === intentName) {
         getWelcomeResponse(callback);
     } else if ("AMAZON.HelpIntent" === intentName) {
@@ -197,9 +203,11 @@ function getWelcomeResponse(callback) {
     var shouldEndSession = false;
     var cardTitle = "Welcome to Beer Bot";
 
-    var speechOutput = "Welcome to the bEr Boht, the best source for information " +
+    console.log("Welcome Message Invoked");
+
+    var speechOutput = "Welcome to the Beer Bot, the best source for information " +
         "related to microbreweries and craft beers.  Please begin by saying something like " +
-        "Find me a bEr. This will walk you through available types that I have information on. " +
+        "Find me a beer. This will walk you through available types that I have information on. " +
         "You can also say, List for me the microbreweries in Richmond, Virginia and I will " +
         "return all of the places I have on that particular location.";
 
@@ -213,7 +221,7 @@ function getWelcomeResponse(callback) {
         "list breweries in Richmond, Virginia and it will return all of the places " +
         "I have information on for that location.";
 
-    console.log('speech output : ' + speechOutput);
+    //console.log('speech output : ' + speechOutput);
 
     callback(sessionAttributes,
         buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
@@ -225,6 +233,8 @@ function getHelpResponse(callback) {
     var sessionAttributes = {};
     var cardTitle = "Help";
     // this will be what the user hears after asking for help
+
+    console.log("Help Message Invoked");
 
     var speechOutput = "The Beer bot provides information about different craft beers and who makes them. " +
         "If you are trying to figure out a type of beer to try out, start by saying " +
@@ -428,7 +438,7 @@ function getBreweriesByCity(intent, session, callback) {
 
         // step 1. first check the array of cities that have brewery information for
         for (i = 0; i < breweryDetailAvail.length; i++) {
-            console.log("checking : " + breweryDetailAvail[i].cityName);
+            //console.log("checking : " + breweryDetailAvail[i].cityName);
             
             if (requestCity == breweryDetailAvail[i].cityName) {
                 haveBreweryDetail = true;
@@ -448,7 +458,7 @@ function getBreweriesByCity(intent, session, callback) {
             var getParams = {Bucket : beerDataBucket,
                              Key : 'breweries/' + cityBreweryObject};
 
-            console.log('attempt to pull an object from an s3 bucket' + JSON.stringify(getParams));
+            //console.log('attempt to pull an object from an s3 bucket' + JSON.stringify(getParams));
 
             s3.getObject(getParams, function(err, data) {
                 if(err)
@@ -536,9 +546,9 @@ function getBreweriesByCity(intent, session, callback) {
     }
 }
 
-// this function gets information about prior requests and leverages the active session
+// this function gets information about brewery information from a prior session
 
-function getMoreDetail(intent, session, callback) {
+function getMoreBreweryDetail(intent, session, callback) {
     var repromptText = "";
     var shouldEndSession = false;
     var sessionAttributes = {};
@@ -546,174 +556,175 @@ function getMoreDetail(intent, session, callback) {
     var cardOutput = "";
     var cardTitle = "Detailed Information";
 
-    // first check if a session exists, if so process based on type.  if not then exit
-    if (session.attributes) {
-        sessionAttributes = session.attributes;
-        if (session.attributes.data.detailType == "CategoryData") {
-            // this will provide detail around a particular category of beer
-            console.log("Get category detail for: " + intent.slots.Brewery.value);
-            
-            var beerStyleArray = session.attributes.data.beerStyles;
-            var matchStyle = false;
+    // assume that the prior session has the array of breweries
+    sessionAttributes = session.attributes;
 
-            if (intent.slots.Brewery.value != undefined) {
-                // try and find a match based on the different styles available            
-                for (i = 0; i < beerStyleArray.length; i++) {
-                    if (intent.slots.Brewery.value.toLowerCase() == beerStyleArray[i].name.toLowerCase()) {
-                        console.log("found a match in style for " + JSON.stringify(beerStyleArray[i]));
-                        cardTitle = cardTitle + " " + intent.slots.Brewery.value;
-                        speechOutput = beerStyleArray[i].description;
-                        cardOutput = "Beer Style\n" + beerStyleArray[i].description;
-                        matchStyle = true;
+    // provide detail around breweries
+    var breweryDesc = "";
+    var breweryName = "";
+    var breweryId = "";
+    var detailBreweryInfoAvail = false;
+
+    // this is the brewery name coming in from the utterance
+    requestName = intent.slots.Brewery.value;
+
+    // scrub the name the user provided to make it easier to match
+    requestName = requestName.toLowerCase();
+    requestName = requestName.replace(" company","");
+    requestName = requestName.replace(" brewing","");
+    requestName = requestName.replace(" brewery","");
+    requestName = requestName.replace(" beer","");
+    requestName = requestName.replace("the ","");
+
+    console.log('attempt to get brewery detail: ' + requestName);
+
+    // search through the breweries in the session data for one that matches
+    for (i = 0; i < session.attributes.data.localBreweries.length; i++) {
+        // scrub the choices in the array to make it easier to match taking out common words
+        breweryName = session.attributes.data.localBreweries[i].name;
+        breweryName = breweryName.toLowerCase();
+        breweryName = breweryName.replace(" company","");
+        breweryName = breweryName.replace(" brewing","");
+        breweryName = breweryName.replace(" brewery","");
+        breweryName = breweryName.replace(" beer","");
+        breweryName = breweryName.replace("the ","");
+        breweryName = breweryName.replace(" co.","");
+        //console.log('Brewery Name : ' + breweryName);
+
+        if (breweryName == requestName) {
+            console.log("match id: " + session.attributes.data.localBreweries[i].id);
+            breweryId = session.attributes.data.localBreweries[i].id;
+            detailBreweryInfoAvail = true;
+        };
+    }
+
+    // step #2 in the process if a brewery is found is to get the beers for the particular brewery
+    if (detailBreweryInfoAvail) {
+        cardTitle = "Beer Information for " + intent.slots.Brewery.value;
+        // call BreweryDB API and get what beers are available for particular brewery
+        var APIurl = 'https://api.brewerydb.com/v2/brewery/';
+        //var breweryId = 'mftbkH';
+        //var breweryId = 'HZS3wv';
+        var APIkey = '14d7b7c5858092c173d96393211dd0f3';
+
+        https.get(APIurl + breweryId + '/beers?key=' + APIkey + '&format=json', (res) => {
+            console.log('API Call to Brewery DB HTTP Code: ', res.statusCode);
+            //console.log('headers: ', res.headers);
+
+            var beerData = "";
+
+            res.on('data', (d) => {
+                beerData += d;
+            });
+
+            // this is the logic that gets executed once a successful API call is completed
+            res.on('end', (d) => {
+                // now process data returned from the API call
+                returnData = eval('(' + beerData.toString('utf8') + ')');
+                //console.log(beerData.toString('utf8'));
+                        
+                if(returnData.message == "Request Successful") {
+                    beerArray = returnData.data;
+                    // first make sure that beer data returned in the array
+                    if (beerArray != null) {
+                        speechOutput = "Here are the beers for " + intent.slots.Brewery.value + ". ";
+                        console.log("length: " + beerArray.length);
+                        var beerRange = 0;
+                        // note - Alexa has a maximum of 8000 characters it can repeat at once, so might exceed
+                        if (beerArray.length > 100)
+                            beerRange = 100;
+                        else
+                            beerRange = beerArray.length;
+                        for (i = 0; i < beerRange; i++) {
+                            //console.log('which one ' + i);
+                            if (beerArray[i].style != null && beerArray[i].name != null) {
+                                speechOutput = speechOutput + beerArray[i].name.replace(/[&#]/g, " ") + 
+                                    " is a " + beerArray[i].style.name.replace(/[&]/g, "and")  + ". ";
+                                cardOutput = cardOutput + beerArray[i].name + 
+                                    " : " + beerArray[i].style.name + "\n";
+                            }
+                        };
+                        speechOutput = speechOutput + " If you would like more details on another brewery in " +
+                            session.attributes.data.city + ", please say so now.";
+                        repromptText = "For more details about another brewery, please ask for it now.";
+                    } else {
+                        speechOutput = "Sorry, no beer data available for " + intent.slots.Brewery.value + " found in the " +
+                            "crowdsourced brewery database at brewerydb.com.  Would you like " +
+                            "to try for data about another brewery? If so, state that name now.";
+                        cardOutput = "No Beer data availble for " + requestName + " at BreweryDB.com.";
+                        repromptText = "If you would like microbrewery information about a different location " +
+                            "please ask for it now.";
                     }
                 }
-            } else {
-                console.log('error beer style being dropped from response');
-            }
             
-            if (matchStyle === false) {
-                speechOutput = "I'm sorry, I didn't see a beer style matching " + intent.slots.Brewery.value;
-                repromptText = "Couldn't find a match for " + intent.slots.Brewery.value;
-                cardOutput = "Can't match " + intent.slots.Brewery.value;
-            } else {
-                speechOutput = speechOutput + " If you would like details on another style, please ask now.";
-                repromptText = "For more details on other beer styles, ask now or you can ask about other " +
-                    "beer categories.";
-            }
-
-            callback(sessionAttributes,
-                buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));            
-            
-        } else {
-            // provide detail around breweries
-            var breweryDesc = "";
-            var breweryName = "";
-            var breweryId = "";
-            var detailBreweryInfoAvail = false;
-
-            // scrub the name the user provided to make it easier to match
-            requestName = intent.slots.Brewery.value;
-            requestName = requestName.toLowerCase();
-            requestName = requestName.replace(" company","");
-            requestName = requestName.replace(" brewing","");
-            requestName = requestName.replace(" brewery","");
-            requestName = requestName.replace(" beer","");
-            requestName = requestName.replace("the ","");
-
-            console.log('attempt to get brewery detail: ' + requestName);
-
-            // search through the breweries in the session data for one that matches
-            for (i = 0; i < session.attributes.data.localBreweries.length; i++) {
-                // scrub the data to make it easier to match taking out common words
-                breweryName = session.attributes.data.localBreweries[i].name;
-                breweryName = breweryName.toLowerCase();
-                breweryName = breweryName.replace(" company","");
-                breweryName = breweryName.replace(" brewing","");
-                breweryName = breweryName.replace(" brewery","");
-                breweryName = breweryName.replace(" beer","");
-                breweryName = breweryName.replace("the ","");
-                breweryName = breweryName.replace(" co.","");
-                //console.log('Brewery Name : ' + breweryName);
-
-                if (breweryName == requestName) {
-                    console.log("match id: " + session.attributes.data.localBreweries[i].id);
-                    breweryId = session.attributes.data.localBreweries[i].id;
-                    detailBreweryInfoAvail = true;
-                };
-            }
-
-            // step #2 in the process if a brewery is found is to get the beers for the particular brewery
-            if (detailBreweryInfoAvail) {
-                cardTitle = "Beer Information for " + intent.slots.Brewery.value;
-                // call BreweryDB API and get what beers are available for particular brewery
-                var APIurl = 'https://api.brewerydb.com/v2/brewery/';
-                //var breweryId = 'mftbkH';
-                //var breweryId = 'HZS3wv';
-                var APIkey = '14d7b7c5858092c173d96393211dd0f3';
-
-                https.get(APIurl + breweryId + '/beers?key=' + APIkey + '&format=json', (res) => {
-                    console.log('API Call to Brewery DB HTTP Code: ', res.statusCode);
-                    //console.log('headers: ', res.headers);
-
-                    var beerData = "";
-
-                    res.on('data', (d) => {
-                        beerData += d;
-                    });
-
-                    // this is the logic that gets executed once a successful API call is completed
-                    res.on('end', (d) => {
-                        // now process data returned from the API call
-                        returnData = eval('(' + beerData.toString('utf8') + ')');
-                        //console.log(beerData.toString('utf8'));
-                        
-                        if(returnData.message == "Request Successful") {
-                            beerArray = returnData.data;
-                            // first make sure that beer data returned in the array
-                            if (beerArray != null) {
-                                speechOutput = "Here are the beers for " + intent.slots.Brewery.value + ". ";
-                                console.log("length: " + beerArray.length);
-                                var beerRange = 0;
-                                // note - Alexa has a maximum of 8000 characters it can repeat at once, so might exceed
-                                if (beerArray.length > 100)
-                                    beerRange = 100;
-                                else
-                                    beerRange = beerArray.length;
-                                for (i = 0; i < beerRange; i++) {
-                                    //console.log('which one ' + i);
-                                    if (beerArray[i].style != null && beerArray[i].name != null) {
-                                        speechOutput = speechOutput + beerArray[i].name.replace(/[&#]/g, " ") + 
-                                            " is a " + beerArray[i].style.name.replace(/[&]/g, "and")  + ". ";
-                                        cardOutput = cardOutput + beerArray[i].name + 
-                                            " : " + beerArray[i].style.name + "\n";
-                                    }
-                                };
-                                speechOutput = speechOutput + " If you would like more details on another brewery in " +
-                                    session.attributes.data.city + ", please say so now.";
-                                repromptText = "For more details about another brewery, please ask for it now.";
-                            } else {
-                                speechOutput = "Sorry, no beer data available for " + intent.slots.Brewery.value + " found in the " +
-                                    "crowdsourced brewery database at brewerydb.com.  Would you like " +
-                                    "to try for data about another brewery? If so, state that name now.";
-                                cardOutput = "No Beer data availble for " + requestName + " at BreweryDB.com.";
-                                repromptText = "If you would like microbrewery information about a different location " +
-                                    "please ask for it now.";
-                            }
-                        }
-                    
-                        callback(sessionAttributes,
-                            buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
-                    });
-
-                }).on('error', (e) => {
-                    console.error(e);
-                });
-            } else {
-                // this logic processes when a match on the brewery name occurred
-                speechOutput = "Sorry, I don't have information about " + intent.slots.Brewery.value +
-                   ". If you would like information on breweries from another location " +
-                    " please ask that now.";
-                cardOutput = "No information available on : " + intent.slots.Brewery.value;
-                repromptText = "If you would like information on another location, please " +
-                    "say something like List breweries from Charleston, South Carolina.";
-                    
                 callback(sessionAttributes,
-                    buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession)); 
-            }
-            
-        }
+                    buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
+            });
 
+        }).on('error', (e) => {
+            console.error(e);
+        });
     } else {
-        speechOutput = "Please first ask for details about a particular city.";
-        repromptText = "Before getting details, you will need to find information about " +
-            "a particular location. Please say something like " +
-            "List microbreweries for Richmond, Virginia.";
+        // this logic processes when a match on the brewery name did not occur
+        speechOutput = "Sorry, I don't have information about " + intent.slots.Brewery.value +
+           ". If you would like information on breweries from another location " +
+            " please ask that now.";
+        cardOutput = "No information available on : " + intent.slots.Brewery.value;
+        repromptText = "If you would like information on another location, please " +
+            "say something like List breweries from Charleston, South Carolina.";
             
         callback(sessionAttributes,
-            buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));            
+            buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession)); 
     }
 }
 
+// this logic gets executed when explaining details on a beer category
+
+function getMoreCategoryDetail(intent, session, callback) {
+    var repromptText = "";
+    var shouldEndSession = false;
+    var sessionAttributes = {};
+    var speechOutput = "";
+    var cardOutput = "";
+    var cardTitle = "Detailed Information";
+
+    sessionAttributes = session.attributes;
+
+    console.log("Get category detail for: " + intent.slots.Brewery.value);
+            
+    var beerStyleArray = session.attributes.data.beerStyles;
+    var matchStyle = false;
+
+    if (intent.slots.Brewery.value != undefined) {
+        // try and find a match based on the different styles available            
+        for (i = 0; i < beerStyleArray.length; i++) {
+            if (intent.slots.Brewery.value.toLowerCase() == beerStyleArray[i].name.toLowerCase()) {
+                console.log("found a match in style for " + JSON.stringify(beerStyleArray[i]));
+                cardTitle = cardTitle + " " + intent.slots.Brewery.value;
+                speechOutput = beerStyleArray[i].description;
+                cardOutput = "Beer Style\n" + beerStyleArray[i].description;
+                matchStyle = true;
+            }
+        }
+    } else {
+        console.log('error beer style being dropped from response');
+    }
+            
+    if (matchStyle === false) {
+        speechOutput = "I'm sorry, I didn't see a beer style matching " + intent.slots.Brewery.value;
+        repromptText = "Couldn't find a match for " + intent.slots.Brewery.value;
+        cardOutput = "Can't match " + intent.slots.Brewery.value;
+    } else {
+        speechOutput = speechOutput + " If you would like details on another style, please ask now.";
+        repromptText = "For more details on other beer styles, ask now or you can ask about other " +
+            "beer categories.";
+    }
+
+    callback(sessionAttributes,
+        buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));            
+
+}
+ 
 // --------------- Helpers that build all of the responses -----------------------
 
 function buildSpeechletResponse(title, output, cardInfo, repromptText, shouldEndSession) {
