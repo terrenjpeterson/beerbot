@@ -613,17 +613,99 @@ function getBeersAtBrewery(intent, session, callback) {
                     }
                 }
 
+                // if a match was found in the lookup array, then call the API with the BreweryID
+ 
                 if (matchBrewery.found) {
-                    speechOutput = "brewery is " + matchBrewery.name + " in " + matchBrewery.city + 
-                        " " + matchBrewery.state;
-                    cardOutput = speechOutput;
+                    var APIurl = 'https://api.brewerydb.com/v2/brewery/';
+                    var APIkey = 'xxx';
+
+                    console.log('now invoking BreweryDB API call');
+
+                    https.get(APIurl + matchBrewery.breweryId + '/beers?key=' + APIkey + '&format=json', (res) => {
+                        console.log('API Call to Brewery DB HTTP Code: ', res.statusCode);
+
+                        var beerData = "";
+
+                        res.on('data', (d) => {
+                            beerData += d;
+                        });
+                        
+                        // this is the logic that gets executed once a successful API call is completed
+                        res.on('end', (d) => {
+                            // now process data returned from the API call
+                            returnData = eval('(' + beerData.toString('utf8') + ')');
+                            //console.log(beerData.toString('utf8'));
+                        
+                            if(returnData.message == "Request Successful") {
+                                beerArray = returnData.data;
+
+                                // first make sure that beer data returned in the array, then format in the response
+
+                                console.log('match brewery ' + matchBrewery.city);
+
+                                if (beerArray != null) {
+                                    speechOutput = "Here are the beers for " + matchBrewery.name + 
+                                        " in " + matchBrewery.city + " " + matchBrewery.state + ". ";
+                        
+                                    console.log("number of beers for brewery: " + beerArray.length);
+
+                                    var beerRange = 0;
+                                    // note - Alexa has a maximum of 8000 characters it can repeat at once, so might exceed
+                                    if (beerArray.length > 100)
+                                        beerRange = 100;
+                                    else
+                                        beerRange = beerArray.length;
+
+                                    for (i = 0; i < beerRange; i++) {
+                                        console.log('which one ' + i);
+                                        if (beerArray[i].style != null && beerArray[i].name != null) {
+                                            speechOutput = speechOutput + beerArray[i].name.replace(/[&#]/g, " ") + 
+                                                " is a " + beerArray[i].style.name.replace(/[&]/g, "and")  + ". ";
+                                            cardOutput = cardOutput + beerArray[i].name + 
+                                                " : " + beerArray[i].style.name + "\n";
+                                        }
+                                    };
+                                
+                                    speechOutput = speechOutput + " If you would like more details on another brewery, please say so now.";
+                                    
+                                    repromptText = "For more details about another brewery, please ask for it now.";
+                                    
+                                    callback(sessionAttributes,
+                                        buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
+                                        
+                                } else {
+                                    // this logic gets processed if the brewery exists, but no related beers
+                                
+                                    speechOutput = "Sorry, no beer data available for " + matchBrewery.name + " found in the " +
+                                        "crowdsourced brewery database at brewerydb.com.  Would you like " +
+                                        "to try for data about another brewery? If so, state that name now.";
+                                    
+                                    cardOutput = "No Beer data availble for " + matchBrewery.name + " at BreweryDB.com.";
+                                
+                                    repromptText = "If you would like microbrewery information about a different location " +
+                                        "please ask for it now.";
+                                        
+                                    callback(sessionAttributes,
+                                        buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));    
+                                }
+                            }
+                        });
+                    }).on('error', (e) => {
+                        console.error(e);
+                    });
+
                 } else {
-                    speechOutput = "Sorry, I wasn't able to find a match for " + intent.slots.Brewery.value + ". ";
+                    // this logic gets invoked if a match can't be found for the uttered name in the array
+                    speechOutput = "Sorry, I wasn't able to find a match for " + intent.slots.Brewery.value + ". " +
+                        "Please try again, and if you need the names for brewery names for a location, say " +
+                        "something like What breweries do you have for Richmond, Virginia.";
                     cardOutput = "No match for : " + intent.slots.Brewery.value;
+                    repromptText = "If you need names for microbreweries in a particular location, please " +
+                        "say something like What breweries do you have for Richmond, Virginia.";
+                        
+                    callback(sessionAttributes,
+                        buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
                 }
-                
-                callback(sessionAttributes,
-                    buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
             }
         });
     }
@@ -688,7 +770,7 @@ function getMoreBreweryDetail(intent, session, callback) {
         var APIurl = 'https://api.brewerydb.com/v2/brewery/';
         //var breweryId = 'mftbkH';
         //var breweryId = 'HZS3wv';
-        var APIkey = '14d7b7c5858092c173d96393211dd0f3';
+        var APIkey = 'xxx';
 
         https.get(APIurl + breweryId + '/beers?key=' + APIkey + '&format=json', (res) => {
             console.log('API Call to Brewery DB HTTP Code: ', res.statusCode);
