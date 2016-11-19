@@ -164,8 +164,8 @@ function onIntent(intentRequest, session, callback) {
         getBreweriesByCity(intent, session, callback);
     } else if ("GetBeerStyles" === intentName) {
         getBeerStyles(intent, session, callback);
-//    } else if ("WhatsOnTap" === intentName) {
-//        getBeersAtBrewery(intent, session, callback);        
+    } else if ("WhatsOnTap" === intentName) {
+        getBeersAtBrewery(intent, session, callback);        
     } else if ("GetMoreDetail" === intentName) {
         if (session.attributes.data.detailType == "CategoryData") {
             getMoreCategoryDetail(intent, session, callback);
@@ -546,6 +546,89 @@ function getBreweriesByCity(intent, session, callback) {
     }
 }
 
+// this function gets the information about a brewery passed in
+
+function getBeersAtBrewery(intent, session, callback) {
+    var shouldEndSession = false;
+    var sessionAttributes = {};
+    var speechOutput = "";
+    var cardOutput = "";
+    var repromptText = "";
+    var cardTitle = "Get Brewery Detail";
+
+    // first validate that a Brewery was passed in
+    
+    if (intent.slots.Brewery.value) {
+
+        var breweryRequest = intent.slots.Brewery.value;
+        
+        // scrub the request name to its most primative value
+        
+        breweryRequest = breweryRequest.toLowerCase();
+        breweryRequest = breweryRequest.replace(" company","");
+        breweryRequest = breweryRequest.replace(" brewing","");
+        breweryRequest = breweryRequest.replace(" brewery","");
+        breweryRequest = breweryRequest.replace(" llc","");
+        breweryRequest = breweryRequest.replace("the ","");
+        
+        // now retrieve the database of all breweries
+        
+        var s3 = new aws.S3();
+
+        var getParams = {Bucket : beerDataBucket,
+                        Key : 'stateData/all.json'};
+
+        s3.getObject(getParams, function(err, data) {
+            if(err)
+                console.log('Error getting brewery data : ' + err);
+            else {
+                console.log('found the data array');
+            
+                var returnData = eval('(' + data.Body + ')');
+                var breweryArray = returnData;
+                
+                console.log('data: ' + breweryArray.length);
+                
+                console.log('trying to find ' + breweryRequest);
+                
+                var matchBrewery = {};
+                    matchBrewery.found = false;
+                
+                // search through all of the breweries for a match
+                
+                for (i = 0; i < breweryArray.length; i++) {
+                    searchName = breweryArray[i].name;
+                    searchName = searchName.toLowerCase();
+                    searchName = searchName.replace(" brewery","");
+                    searchName = searchName.replace(" brewing","");
+                    searchName = searchName.replace(" company","");
+                    //console.log('attempt ' + searchName);
+                    if (breweryRequest == searchName) {
+                        console.log('found it ' + breweryArray[i].breweryId);
+                        matchBrewery.found = true;
+                        matchBrewery.name = breweryArray[i].name;
+                        matchBrewery.city = breweryArray[i].city;
+                        matchBrewery.state = breweryArray[i].state;
+                        matchBrewery.breweryId = breweryArray[i].breweryId;
+                    }
+                }
+
+                if (matchBrewery.found) {
+                    speechOutput = "brewery is " + matchBrewery.name + " in " + matchBrewery.city + 
+                        " " + matchBrewery.state;
+                    cardOutput = speechOutput;
+                } else {
+                    speechOutput = "Sorry, I wasn't able to find a match for " + intent.slots.Brewery.value + ". ";
+                    cardOutput = "No match for : " + intent.slots.Brewery.value;
+                }
+                
+                callback(sessionAttributes,
+                    buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
+            }
+        });
+    }
+}
+
 // this function gets information about brewery information from a prior session
 
 function getMoreBreweryDetail(intent, session, callback) {
@@ -605,7 +688,7 @@ function getMoreBreweryDetail(intent, session, callback) {
         var APIurl = 'https://api.brewerydb.com/v2/brewery/';
         //var breweryId = 'mftbkH';
         //var breweryId = 'HZS3wv';
-        var APIkey = 'xxx';
+        var APIkey = '14d7b7c5858092c173d96393211dd0f3';
 
         https.get(APIurl + breweryId + '/beers?key=' + APIkey + '&format=json', (res) => {
             console.log('API Call to Brewery DB HTTP Code: ', res.statusCode);
