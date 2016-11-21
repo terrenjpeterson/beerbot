@@ -6,6 +6,21 @@ var aws = require('aws-sdk');
 
 const https = require('https');
 
+var stateData = [
+            {"stateName":"Alabama", "breweryCount":28},
+            {"stateName":"Alaska", "breweryCount":32},
+            {"stateName":"Arizona", "breweryCount":74},
+            {"stateName":"Arkansas", "breweryCount":18},
+            {"stateName":"California", "breweryCount":561},
+            {"stateName":"Colorado", "breweryCount":262},
+            {"stateName":"Connecticut", "breweryCount":41},
+            {"stateName":"Delaware", "breweryCount":10},
+            {"stateName":"District of Columbia", "breweryCount":11},
+            {"stateName":"Florida", "breweryCount":173},
+            {"stateName":"Georgia", "breweryCount":49},
+            {"stateName":"Hawaii", "breweryCount":11}
+];
+
 var breweryDetailAvail = [
             {"cityName":"Richmond", "stateName":"Virginia", "breweryData":"locationsRichmond.json"},
             {"cityName":"Seattle", "stateName":"Washington", "breweryData":"locationsSeattle.json"},
@@ -425,124 +440,117 @@ function getBreweriesByCity(intent, session, callback) {
     var speechOutput = "";
     var cardOutput = "";
     var repromptText = "";
-    var cardTitle = "Brewery List by City";
+    var cardTitle = "Brewery List by Location";
 
     if (intent.slots.City.value) {
 
-        requestCity = intent.slots.City.value;
-        requestCity = requestCity.substr(0,1).toUpperCase() + requestCity.substr(1);
-        console.log("find data for " + requestCity);
-        cardTitle = "Brewery information for " + requestCity;
-        haveBreweryDetail = false;
-        cityBreweryObject = "";
-
-        // step 1. first check the array of cities that have brewery information for
-        for (i = 0; i < breweryDetailAvail.length; i++) {
-            //console.log("checking : " + breweryDetailAvail[i].cityName);
-            
-            if (requestCity == breweryDetailAvail[i].cityName) {
-                haveBreweryDetail = true;
-                cityBreweryObject = breweryDetailAvail[i].breweryData;
-            }
-            if (requestCity == breweryDetailAvail[i].cityName + " " + breweryDetailAvail[i].stateName) {
-                haveBreweryDetail = true;
-                cityBreweryObject = breweryDetailAvail[i].breweryData;
+        var locationRequest = intent.slots.City.value;
+        var foundMatch = false;
+        var breweryChoices = 0;
+        
+        var locationRequest = locationRequest.substr(0,1).toUpperCase() + locationRequest.substr(1);
+        
+        // first check to see if all that has been provided is a state
+        
+        for (i = 0; i < stateData.length; i++) {
+            if (stateData[i].stateName == locationRequest) {
+                console.log('there are ' + stateData[i].breweryCount + ' breweries in ' + locationRequest);
+                foundMatch = true;
+                breweryChoices = stateData[i].breweryCount;
+            } else {
+                console.log('no match between ' + stateData[i].stateName + ' and ' + locationRequest );
             }
         }
 
-        // step 2. process response depending on if detail is available
-        if (haveBreweryDetail) {
+        // then see if there are too many listings if only a state is provided.  then redirect to be more specific.
         
-            var s3 = new aws.S3();
-
-            var getParams = {Bucket : beerDataBucket,
-                             Key : 'breweries/' + cityBreweryObject};
-
-            //console.log('attempt to pull an object from an s3 bucket' + JSON.stringify(getParams));
-
-            s3.getObject(getParams, function(err, data) {
-                if(err)
-                    console.log('Error getting brewery data : ' + err);
-                else {
-                    var returnData = eval('(' + data.Body + ')');
-                    var breweryArray = returnData.data;
-
-                    speechOutput = "The microbreweries in " + requestCity + " are ";
-                    cardOutput = "Microbreweries:\n";
-
-                    var localBreweries = [];
-                    var localDetailBrewery = "";
-
-                    // parse through array of breweries retrieved to get information needed
-                    for (i = 0; i < breweryArray.length; i++) {
-                        var breweryName = breweryArray[i].brewery.name;
-
-                        var brewery = {};
-                            brewery.name = breweryName.replace(/[&]/g, "and");
-                            brewery.id   = breweryArray[i].brewery.id;
-
-                        localBreweries.push(brewery);
-
-                        // save off last brewery to use in encouraging user to ask for brewery detail.
-                        localDetailBrewery = breweryName;
-                        // shorten the name to encourage not spelling out common words like brewery that are hard to pronounce
-                        localDetailBrewery = localDetailBrewery.replace(" Company","");
-                        localDetailBrewery = localDetailBrewery.replace(" Brewing","");
-                        localDetailBrewery = localDetailBrewery.replace(" Brewery","");
-                        localDetailBrewery = localDetailBrewery.replace(" Beer","");
-                        localDetailBrewery = localDetailBrewery.replace("The ","");
-                        localDetailBrewery = localDetailBrewery.replace(" Co.","");
-                            
-                        // list out brewery onto card and verbalize back in the response
-                        speechOutput = speechOutput + breweryName + ", ";
-                        cardOutput = cardOutput + breweryName + "\n";
-                    }
-                    
-                    // saving off the local breweries into session data in case needed in next utterance
-                    
-                    var savedSession = {};
-                        savedSession.localBreweries = localBreweries;
-                        savedSession.detailType = "BreweryData";
-                        savedSession.city = requestCity;
-
-                    var savedData = {};
-                        savedData.data = savedSession;
-                        
-                    sessionAttributes = savedData;
-                    
-                    speechOutput = speechOutput + "If you would like to know about the beers available at one " +
-                        "of these breweries, please say something like, More detail on " + localDetailBrewery;
-                    
-                    repromptText = "If you would like brewery information for another city, please ask for it. " +
-                        "For a complete list of cities available, say List Cities.";
-                    
-                    callback(sessionAttributes,
-                        buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
-                }
-            });
-            
-        } else {
-            // this gets invoked when what the utterance was doesn't match anything in the array
-            speechOutput = "I'm sorry I couldn't locate information for " + requestCity + ". " +
-                "If you would like a complete list of cities that I do have, please say " +
-                "List Cities.";
-            cardOutput = "No information was available for " + requestCity;
-            repromptOutput = "No information was available for " + requestCity + ". " +
-                "If you would like a complete list of cities that I do have, please say " +
-                "List Cities.";
+        if (foundMatch && breweryChoices > 50) {
+            speechOutput = "Sorry, there are " + breweryChoices + " microbreweries listed for the state " +
+                "of " + locationRequest + ". Please try again and add the city name to get details.";
+            cardOutput = "Too many microbreweries to list in " + locationRequest + ".";
 
             callback(sessionAttributes,
                 buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
+        }
+
+        // go against the database of microbreweries and find matches
+
+        var s3 = new aws.S3();
+
+        var getParams = {Bucket : beerDataBucket,
+                         Key : 'stateData/all.json'};
+
+        console.log('attempt to pull an object from an s3 bucket' + JSON.stringify(getParams));
+
+        s3.getObject(getParams, function(err, data) {
+            if(err)
+                console.log('Error getting brewery data : ' + err);
+            else {
+                var returnData = eval('(' + data.Body + ')');
+                var breweryArray = returnData;
+
+                var localBreweries = [];
+                var localDetailBrewery = "";
+
+                // parse through array of breweries retrieved to see if there are any matches
+                    
+                for (i = 0; i < breweryArray.length; i++) {
+
+                    //console.log('processing ' + i);
+
+                    if (breweryArray[i].city + " " + breweryArray[i].state == locationRequest) {
+                        console.log('matched with ' + locationRequest);
+                        foundMatch = true;
+
+                        var breweryName = breweryArray[i].name;
+
+                        var brewery = {};
+                            brewery.name  = breweryName.replace(/[&]/g, "and");
+                            brewery.id    = breweryArray[i].breweryId;
+                            brewery.city  = breweryArray[i].city;
+                            brewery.state = breweryArray[i].state;
+
+                        localBreweries.push(brewery);
+                    }
+                }
+
+                if (foundMatch) {
+                    
+                    speechOutput = "There are " + localBreweries.length + " total microbreweries in " + locationRequest + 
+                        ". Here are the names. ";
+                        
+                    for (i = 0; i < localBreweries.length; i++ ) {
+                        speechOutput = speechOutput + localBreweries[i].name + ", ";
+                        cardOutput = cardOutput + localBreweries[i].name + '/n';
+                    }
+                        
+                    speechOutput = speechOutput + ". If you would like to hear information about one of these, please say " +
+                        "something like What's on tap at " + localBreweries[0].name + ". ";
+                    repromptText = "Would you like information about another location? If so, please say something like " +
+                        "What are the microbreweries in Richmond, Virginia.";
+
+                } else {
+                    speechOutput = "Sorry, there aren't any microbreweries listed for " + locationRequest + ". " +
+                        "Would you like to try another location?  If so, please ask for it now.";
+                    cardOutput = "No matches for " + locationRequest;
+                    repromptText = "Would you like to know information about microbreweries in a particular location? " +
+                        "If so, please say something like What are the microbreweries in Richmond, Virginia.";
+                }
+                    
+                callback(sessionAttributes,
+                    buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
             }
+        });
     } else {
-        speechOutput = "Please provide a city name. If you would like a complete list of cities " +
-            "that I do have, please say List Cities.";
-        cardOutput = "No city name provided.";
-        repromptOutput = "To use this feature, you need to provide a city name. If you would like " +
-            "a complete list of cities, please say List Cities.";
+        speechOutput = "Please provide a location for me to research microbreweries for. For example, " +
+            "say something like What are the microbreweries for Richmond, Virginia.";
+        cardOutput = "No location provided.";
+        repromptText = "Would you like to know information about microbreweries in a particular location? " +
+            "If so, please say something like What are the microbreweries of Richmond, Virginia."
 
         callback(sessionAttributes,
-            buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));            
+            buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
+        
     }
 }
 
