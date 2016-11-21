@@ -18,7 +18,46 @@ var stateData = [
             {"stateName":"District of Columbia", "breweryCount":11},
             {"stateName":"Florida", "breweryCount":173},
             {"stateName":"Georgia", "breweryCount":49},
-            {"stateName":"Hawaii", "breweryCount":11}
+            {"stateName":"Hawaii", "breweryCount":11},
+            {"stateName":"Idaho", "breweryCount":37},
+            {"stateName":"Illinois", "breweryCount":150},
+            {"stateName":"Indiana", "breweryCount":117},
+            {"stateName":"Iowa", "breweryCount":55},
+            {"stateName":"Kansas", "breweryCount":19},
+            {"stateName":"Kentucky", "breweryCount":30},
+            {"stateName":"Louisiana", "breweryCount":22},
+            {"stateName":"Maine", "breweryCount":55},
+            {"stateName":"Maryland", "breweryCount":64},
+            {"stateName":"Massachusetts", "breweryCount":106},
+            {"stateName":"Michigan", "breweryCount":224},
+            {"stateName":"Minnesota", "breweryCount":121},
+            {"stateName":"Mississippi", "breweryCount":7},
+            {"stateName":"Missouri", "breweryCount":60},
+            {"stateName":"Montana", "breweryCount":58},
+            {"stateName":"Nebraska", "breweryCount":27},
+            {"stateName":"Nevada", "breweryCount":36},
+            {"stateName":"New Hampshire", "breweryCount":49},
+            {"stateName":"New Jersey", "breweryCount":54},
+            {"stateName":"New Mexico", "breweryCount":48},
+            {"stateName":"New York", "breweryCount":239},
+            {"stateName":"North Carolina", "breweryCount":213},
+            {"stateName":"North Dakota", "breweryCount":7},
+            {"stateName":"Ohio", "breweryCount":132},
+            {"stateName":"Oklahoma", "breweryCount":27},
+            {"stateName":"Oregon", "breweryCount":181},
+            {"stateName":"Pennsylvania", "breweryCount":167},
+            {"stateName":"Rhode Island", "breweryCount":14},
+            {"stateName":"South Carolina", "breweryCount":41},
+            {"stateName":"South Dakota", "breweryCount":14},
+            {"stateName":"Tennessee", "breweryCount":47},
+            {"stateName":"Texas", "breweryCount":188},
+            {"stateName":"Utah", "breweryCount":22},
+            {"stateName":"Vermont", "breweryCount":46},
+            {"stateName":"Virginia", "breweryCount":142},
+            {"stateName":"Washington", "breweryCount":225},
+            {"stateName":"West Virginia", "breweryCount":9},
+            {"stateName":"Wisconsin", "breweryCount":141},
+            {"stateName":"Wyoming", "breweryCount":26}
 ];
 
 var breweryDetailAvail = [
@@ -457,17 +496,17 @@ function getBreweriesByCity(intent, session, callback) {
                 console.log('there are ' + stateData[i].breweryCount + ' breweries in ' + locationRequest);
                 foundMatch = true;
                 breweryChoices = stateData[i].breweryCount;
-            } else {
-                console.log('no match between ' + stateData[i].stateName + ' and ' + locationRequest );
             }
         }
 
         // then see if there are too many listings if only a state is provided.  then redirect to be more specific.
         
-        if (foundMatch && breweryChoices > 50) {
+        if (foundMatch && breweryChoices > 100) {
             speechOutput = "Sorry, there are " + breweryChoices + " microbreweries listed for the state " +
                 "of " + locationRequest + ". Please try again and add the city name to get details.";
             cardOutput = "Too many microbreweries to list in " + locationRequest + ".";
+            repromptText = "Please be more specific in your search.  There are more than 100 microbreweries " +
+                "in " + locationRequest + " so add a city to narrow your search.";
 
             callback(sessionAttributes,
                 buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
@@ -496,11 +535,14 @@ function getBreweriesByCity(intent, session, callback) {
                     
                 for (i = 0; i < breweryArray.length; i++) {
 
-                    //console.log('processing ' + i);
+                    // this changes the search criteria - either state or city + state
+                    if (foundMatch) {
+                        searchRequest = breweryArray[i].state + "";
+                    } else {
+                        searchRequest = breweryArray[i].city + " " + breweryArray[i].state;
+                    }
 
-                    if (breweryArray[i].city + " " + breweryArray[i].state == locationRequest) {
-                        console.log('matched with ' + locationRequest);
-                        foundMatch = true;
+                    if (searchRequest.toLowerCase() == locationRequest.toLowerCase()) {
 
                         var breweryName = breweryArray[i].name;
 
@@ -514,14 +556,14 @@ function getBreweriesByCity(intent, session, callback) {
                     }
                 }
 
-                if (foundMatch) {
+                if (localBreweries.length > 0) {
                     
                     speechOutput = "There are " + localBreweries.length + " total microbreweries in " + locationRequest + 
                         ". Here are the names. ";
                         
                     for (i = 0; i < localBreweries.length; i++ ) {
                         speechOutput = speechOutput + localBreweries[i].name + ", ";
-                        cardOutput = cardOutput + localBreweries[i].name + '/n';
+                        cardOutput = cardOutput + localBreweries[i].name + '\n';
                     }
                         
                     speechOutput = speechOutput + ". If you would like to hear information about one of these, please say " +
