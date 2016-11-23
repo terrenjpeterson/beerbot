@@ -123,7 +123,7 @@ var beerCategories = [
             { "id":1, "name":"British Ales"},
             { "id":2, "name":"Irish Ales"},
             { "id":3, "name":"North American Ales"},
-            { "id":4, "name":"German Ales"},
+//            { "id":4, "name":"German Ales"},
             { "id":5, "name":"Belgian and French Ales"},
             { "id":6, "name":"International Ale Styles"},
             { "id":7, "name":"European-Germanic Lager"},
@@ -224,7 +224,8 @@ function onIntent(intentRequest, session, callback) {
         if (session.attributes.data.detailType == "CategoryData") {
             getMoreCategoryDetail(intent, session, callback);
         } else {
-            getMoreBreweryDetail(intent, session, callback);
+            getBeersAtBrewery(intent, session, callback);
+//            getMoreBreweryDetail(intent, session, callback);
         }
     } else if ("AMAZON.StartOverIntent" === intentName) {
         getWelcomeResponse(callback);
@@ -512,6 +513,15 @@ function getBreweriesByCity(intent, session, callback) {
                 buildSpeechletResponse(cardTitle, speechOutput, cardOutput, repromptText, shouldEndSession));
         }
 
+        // then check if the name given is a common city, then append the state
+        
+        for (i = 0; i < breweryDetailAvail.length; i++) {
+            if (breweryDetailAvail[i].cityName == locationRequest) {
+                console.log("just a city name provided " + locationRequest);
+                locationRequest = locationRequest + " " + breweryDetailAvail[i].stateName;
+            }
+        }
+
         // go against the database of microbreweries and find matches
 
         var s3 = new aws.S3();
@@ -667,7 +677,7 @@ function getBeersAtBrewery(intent, session, callback) {
  
                 if (matchBrewery.found) {
                     var APIurl = 'https://api.brewerydb.com/v2/brewery/';
-                    var APIkey = 'xxx';
+                    var APIkey = '14d7b7c5858092c173d96393211dd0f3';
 
                     console.log('now invoking BreweryDB API call');
 
@@ -820,7 +830,7 @@ function getMoreBreweryDetail(intent, session, callback) {
         var APIurl = 'https://api.brewerydb.com/v2/brewery/';
         //var breweryId = 'mftbkH';
         //var breweryId = 'HZS3wv';
-        var APIkey = 'xxx';
+        var APIkey = '14d7b7c5858092c173d96393211dd0f3';
 
         https.get(APIurl + breweryId + '/beers?key=' + APIkey + '&format=json', (res) => {
             console.log('API Call to Brewery DB HTTP Code: ', res.statusCode);
