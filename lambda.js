@@ -224,8 +224,8 @@ function onIntent(intentRequest, session, callback) {
         if (session.attributes.data.detailType == "CategoryData") {
             getMoreCategoryDetail(intent, session, callback);
         } else {
-            getBeersAtBrewery(intent, session, callback);
-//            getMoreBreweryDetail(intent, session, callback);
+//            getBeersAtBrewery(intent, session, callback);
+            getMoreBreweryDetail(intent, session, callback);
         }
     } else if ("AMAZON.StartOverIntent" === intentName) {
         getWelcomeResponse(callback);
@@ -566,15 +566,30 @@ function getBreweriesByCity(intent, session, callback) {
                     }
                 }
 
+                // if the local breweries array has entries, then the city was a match - process response accordingly
+
                 if (localBreweries.length > 0) {
                     
                     speechOutput = "There are " + localBreweries.length + " total microbreweries in " + locationRequest + 
                         ". Here are the names. ";
+                    cardOutput = "Local microbreweries for " + locationRequest + "\n";
                         
                     for (i = 0; i < localBreweries.length; i++ ) {
                         speechOutput = speechOutput + localBreweries[i].name + ", ";
                         cardOutput = cardOutput + localBreweries[i].name + '\n';
                     }
+                     
+                    // save off brewery data for city into the session in case more detail is requested
+                    
+                    var savedSession = {};
+                        savedSession.locationRequest = locationRequest;
+                        savedSession.detailType = "BreweryData";
+                        savedSession.localBreweries = localBreweries;
+                    
+                    var savedData = {};
+                        savedData.data = savedSession;
+                        
+                    sessionAttributes = savedData;
                         
                     speechOutput = speechOutput + ". If you would like to hear information about one of these, please say " +
                         "something like What's on tap at " + localBreweries[0].name + ". ";
@@ -582,6 +597,7 @@ function getBreweriesByCity(intent, session, callback) {
                         "What are the microbreweries in Richmond, Virginia.";
 
                 } else {
+                    // in this case, we didn't find any matches for the location - now process response
                     speechOutput = "Sorry, there aren't any microbreweries listed for " + locationRequest + ". " +
                         "Would you like to try another location?  If so, please ask for it now.";
                     cardOutput = "No matches for " + locationRequest;
@@ -615,6 +631,9 @@ function getBeersAtBrewery(intent, session, callback) {
     var cardOutput = "";
     var repromptText = "";
     var cardTitle = "Get Brewery Detail";
+    
+    // carry over session detail for next invocation
+    sessionAttributes = session.attributes;
 
     // first validate that a Brewery was passed in
     
@@ -677,7 +696,7 @@ function getBeersAtBrewery(intent, session, callback) {
  
                 if (matchBrewery.found) {
                     var APIurl = 'https://api.brewerydb.com/v2/brewery/';
-                    var APIkey = '14d7b7c5858092c173d96393211dd0f3';
+                    var APIkey = 'xxx';
 
                     console.log('now invoking BreweryDB API call');
 
@@ -830,7 +849,7 @@ function getMoreBreweryDetail(intent, session, callback) {
         var APIurl = 'https://api.brewerydb.com/v2/brewery/';
         //var breweryId = 'mftbkH';
         //var breweryId = 'HZS3wv';
-        var APIkey = '14d7b7c5858092c173d96393211dd0f3';
+        var APIkey = 'xxx';
 
         https.get(APIurl + breweryId + '/beers?key=' + APIkey + '&format=json', (res) => {
             console.log('API Call to Brewery DB HTTP Code: ', res.statusCode);
