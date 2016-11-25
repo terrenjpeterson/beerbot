@@ -18,17 +18,17 @@ Root
 
 Within the main skill (lambda.js) contains processing that ties the following intents to functions. 
 
-| Intent | Function |
-|----------|--------|
-| ListAvailableCities | getCityNames() |
-| ListBeerCategories | getBeerCatagories() |
-| ListBreweriesForCity | getBreweriesByCity() |
-| GetBeerStyles | getBeerStyles() |
-| WhatsOnTap | getBeersAtBrewery() |
-| GetMoreDetail | getMoreCategoryDetail() |
-| GetMoreDetail | getMoreBreweryDetail() |
-| StartOverIntent | getWelcomeResponse() |
-| HelpIntent | getHelpResponse() |
-| RepeatIntent | getWelcomeResponse() |
-| StopIntent | handleSessionEndRequest() |
-| CancelIntent | handleSessionEndRequest() |
+| Intent | Function | Data |
+|----------|--------|------|
+| ListAvailableCities | getCityNames() | local array |
+| ListBeerCategories | getBeerCatagories() | local array |
+| ListBreweriesForCity | getBreweriesByCity() | S3 bucket |
+| GetBeerStyles | getBeerStyles() | S3 bucket |
+| WhatsOnTap | getBeersAtBrewery() | API call |
+| GetMoreDetail | getMoreCategoryDetail() | session data |
+| GetMoreDetail | getMoreBreweryDetail() | API call |
+| StartOverIntent | getWelcomeResponse() | N/A |
+| HelpIntent | getHelpResponse() | N/A |
+| RepeatIntent | getWelcomeResponse() | N/A |
+| StopIntent | handleSessionEndRequest() | N/A |
+| CancelIntent | handleSessionEndRequest() | N/A |
